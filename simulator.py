@@ -47,12 +47,13 @@ class Simulator:
     def simulate(self, balancer, with_cstx=False):
         self.initialize()
         balancer.set_context(self.context)
+        balancer.initialize()
 
         util_number = 0
         to_block = self.context['from_block'] + (self.context['block_to_read'] * self.context['collation_cycle'])
         for block_number in range(self.context['from_block'], to_block):
             for tx in db.transactions.find({"blockNumber": block_number}):
-                balancer.collect(tx)
+                balancer.collect(tx, util_number)
 
                 n_ag = self.context['account_group']
                 from_acc_group = account_to_group(tx['sender'], n_ag)
@@ -87,8 +88,8 @@ class Simulator:
                     to_shard['pending_transactions'] += 1
 
             if (block_number+1) % self.context['block_to_read'] == 0:
-                self.mapping_table = balancer.relocate(self.mapping_table)
                 util_number += 1
+                self.mapping_table = balancer.relocate(self.mapping_table, util_number)
 
         self.report()
 

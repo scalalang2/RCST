@@ -1,22 +1,29 @@
+from util import account_to_group
+from queue import PriorityQueue
+
+import numpy as np
 
 
 class SACC:
     def __init__(self):
         self.context = {}
 
-    def set_context(self, context):
+    def set_context(self, context: dict):
         self.context = context
 
-    def collect(self, tx:dict):
+    def initialize(self):
+        pass
+
+    def collect(self, tx: dict, util_number: int):
         """S-ACC do nothing"""
         pass
 
-    def relocate(self, mapping_table):
+    def relocate(self, mapping_table: dict, util_number: int):
         return mapping_table
 
 
 class GARET:
-    def __init__(self):
+    def __init__(self, relocation_cycle: int):
         """
         :param context: {
             "from_block": 6000000,
@@ -30,19 +37,64 @@ class GARET:
         }
         """
         self.context = {}
+        self.relocation_cycle = relocation_cycle
+        self.gas_used_acc = []
 
-    def set_context(self, context):
+    def set_context(self, context: dict):
         self.context = context
 
-    def collect(self, tx:dict):
-        pass
+    def initialize(self):
+        self.gas_used_acc = []
+        for i in range(self.context['account_group']):
+            el = []
+            for j in range(self.relocation_cycle):
+                el.append(0)
 
-    def relocate(self, mapping_table):
-        return mapping_table
+            self.gas_used_acc.append(el)
+
+    def collect(self, tx: dict, util_number: int):
+        n_ag = self.context['account_group']
+        from_acc_group = account_to_group(tx['sender'], n_ag)
+        to_acc_group = from_acc_group
+
+        is_contract_creation = tx['toAddress'] == '-'
+        if not is_contract_creation:
+            to_acc_group = account_to_group(tx['toAddress'], n_ag)
+
+        self.gas_used_acc[to_acc_group][util_number % self.relocation_cycle] += tx['gasUsed']
+
+    def relocate(self, mapping_table: dict, util_number: int):
+        if util_number % self.relocation_cycle == 0:
+            gas_pred_acc = np.zeros(self.context['account_group'])
+            gas_pred_shard = np.zeros(self.context['number_of_shard'])
+
+            n_ag = self.context['account_group']
+            for i in range(n_ag):
+                for j in range(self.relocation_cycle):
+                    w = (2.0 * (j + 1.0)) / float(self.relocation_cycle * (self.relocation_cycle + 1))
+                    gas_pred_acc[i] += float(self.gas_used_acc[i][j] * w)
+
+            queue = PriorityQueue()
+            for i in range(n_ag):
+                queue.put((gas_pred_acc[i] * - 1, i))
+
+            while not queue.empty():
+                item = queue.get()
+                gas_pred = item[0]
+                acc = item[1]
+
+                min_index = np.argmin(gas_pred_shard)
+                gas_pred_shard[min_index] += gas_pred * -1
+                mapping_table[str(acc)] = min_index
+
+            self.initialize()
+            return mapping_table
+        else:
+            return mapping_table
 
 
 class BalanceMeter:
-    def __init__(self):
+    def __init__(self, relocation_cycle: int):
         """
         :param context: {
             "from_block": 6000000,
@@ -56,10 +108,18 @@ class BalanceMeter:
         }
         """
         self.context = {}
+        self.relocation_cycle = relocation_cycle
+        self.gas_used_acc = []
 
-    def set_context(self, context):
+    def initialize(self):
+        pass
+
+    def set_context(self, context: dict):
         self.context = context
 
-    def relocate(self, mapping_table):
+    def collect(self, tx: dict, util_number: int):
+        pass
+
+    def relocate(self, mapping_table: dict, util_number: int):
         return mapping_table
 
