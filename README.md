@@ -6,4 +6,6 @@ Python implementation of balanceMeter algorithm
 
 [-] Visualize collation utilization into histogram.
 
+[-] Visualizae real-world transaction workload.
+
 [-] Write about usage.
