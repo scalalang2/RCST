@@ -3,3 +3,5 @@ metis
 requests
 pymongo
 python-dotenv
+numpy
+pandas
