@@ -8,4 +8,6 @@ Python implementation of balanceMeter algorithm
 
 [-] Visualizae real-world transaction workload.
 
+[-] Provide off-line mode.
+
 [-] Write about usage.
