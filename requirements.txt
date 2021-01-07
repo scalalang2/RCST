@@ -1,3 +1,5 @@
 networkx
+metis
 requests
 pymongo
+python-dotenv
