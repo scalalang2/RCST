@@ -1,7 +1,24 @@
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+from simulator import Simulator
+from balancer import SACC, GARET, BalanceMeter
 
+simulator = Simulator({
+    "from_block": 6000000,
+    "block_to_read": 20,
+    "collation_cycle": 10,
+    "account_group": 100,
+    "number_of_shard": 20,
+    "gas_limit": 12000000,
+    "gas_cross_shard_tx": 21000,
+})
 
-if __name__ == '__main__':
-    print_hi('PyCharm')
+sacc = SACC()
+simulator.simulate(balancer=sacc)
+simulator.simulate(balancer=sacc, with_cstx=True)
+
+garet = GARET()
+simulator.simulate(balancer=garet)
+simulator.simulate(balancer=garet, with_cstx=True)
+
+balance_meter = BalanceMeter()
+simulator.simulate(balancer=balance_meter)
+simulator.simulate(balancer=balance_meter, with_cstx=True)

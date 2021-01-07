@@ -2,7 +2,8 @@ from db import db
 from util import account_to_group
 from balancer import SACC
 
-import pprint
+import pandas as pd
+import numpy as np
 
 
 class Simulator:
@@ -15,17 +16,21 @@ class Simulator:
             "account_group": 100,
             "number_of_shard": 20,
             "gas_limit": 12000000,
-            "gas_cross_shard_tx": 50000,
-            "with_cstx": False
+            "gas_cross_shard_tx": 50000
         }
         """
         self.context = context
         self.mapping_table = {}
         self.collation_utils = []
+        self.initialize()
 
-        for i in range(context['collation_cycle']):
+    def initialize(self):
+        self.mapping_table = {}
+        self.collation_utils = []
+
+        for i in range(self.context['collation_cycle']):
             collation_util = []
-            for j in range(context['number_of_shard']):
+            for j in range(self.context['number_of_shard']):
                 collation_util.append({
                     "gas_used": 0,
                     "transactions": 0,
@@ -36,10 +41,11 @@ class Simulator:
 
             self.collation_utils.append(collation_util)
 
-        for num in range(context['account_group']):
-            self.mapping_table[str(num)] = num % context['number_of_shard']
+        for num in range(self.context['account_group']):
+            self.mapping_table[str(num)] = num % self.context['number_of_shard']
 
-    def simulate(self, balancer):
+    def simulate(self, balancer, with_cstx=False):
+        self.initialize()
         balancer.set_context(self.context)
 
         util_number = 0
@@ -64,10 +70,10 @@ class Simulator:
 
                 not_limited = to_shard['gas_used'] + tx['gasUsed'] < self.context['gas_limit']
 
-                if self.context['with_cstx'] and util_number > 0:
+                if with_cstx and util_number > 0:
                     prev_shard = self.collation_utils[util_number-1][to_shard_num]
                     cross_shard_gas = prev_shard['cross_shard_tx'] * self.context['gas_cross_shard_tx']
-                    not_limited = to_shard['gas_used'] + tx['gasUsed'] + cross_shard_gas < self.context['gas_limit']
+                    not_limited = (to_shard['gas_used'] + tx['gasUsed'] + cross_shard_gas) < self.context['gas_limit']
 
                 if not_limited:
                     to_shard['gas_used'] += tx['gasUsed']
@@ -84,12 +90,23 @@ class Simulator:
                 self.mapping_table = balancer.relocate(self.mapping_table)
                 util_number += 1
 
+        self.report()
+
     def report(self):
         """
         report collation utilization
         :return: None
         """
-        pass
+        collation_utils = []
+        for el in self.collation_utils:
+            converted = list(map(lambda x: x['gas_used'], el))
+            collation_utils.append(converted)
+
+        data = pd.DataFrame(np.array(collation_utils))
+        utilization = data.mean(axis=0).mean()
+
+        print(data)
+        print("Collation Utilization: %.6f%%" % (utilization/self.context['gas_limit']))
 
 
 if __name__ == "__main__":
@@ -100,10 +117,9 @@ if __name__ == "__main__":
         "account_group": 100,
         "number_of_shard": 20,
         "gas_limit": 12000000,
-        "gas_cross_shard_tx": 50000,
-        "with_cstx": False
+        "gas_cross_shard_tx": 21000,
     })
 
     sacc = SACC()
-    print(sacc)
-    simulator.simulate(sacc)
+    simulator.simulate(balancer=sacc)
+    simulator.simulate(balancer=sacc, with_cstx=True)
