@@ -19,6 +19,11 @@ garet = GARET(relocation_cycle=5)
 simulator.simulate(balancer=garet)
 simulator.simulate(balancer=garet, with_cstx=True)
 
-# balance_meter = BalanceMeter(relocation_cycle=5)
-# simulator.simulate(balancer=balance_meter)
-# simulator.simulate(balancer=balance_meter, with_cstx=True)
+balance_meter = BalanceMeter(
+    relocation_cycle=5,
+    w_tx=0.2,
+    w_gas=0.4,
+    w_cross_tx=0.4
+)
+simulator.simulate(balancer=balance_meter)
+simulator.simulate(balancer=balance_meter, with_cstx=True)

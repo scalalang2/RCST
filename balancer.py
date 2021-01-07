@@ -1,8 +1,10 @@
+from sklearn.preprocessing import normalize
 from util import account_to_group
 from queue import PriorityQueue
 
 import numpy as np
-
+import networkx as nx
+import metis
 
 class SACC:
     def __init__(self):
@@ -44,13 +46,7 @@ class GARET:
         self.context = context
 
     def initialize(self):
-        self.gas_used_acc = []
-        for i in range(self.context['account_group']):
-            el = []
-            for j in range(self.relocation_cycle):
-                el.append(0)
-
-            self.gas_used_acc.append(el)
+        self.gas_used_acc = np.zeros((self.context['account_group'], self.relocation_cycle))
 
     def collect(self, tx: dict, util_number: int):
         n_ag = self.context['account_group']
@@ -94,7 +90,7 @@ class GARET:
 
 
 class BalanceMeter:
-    def __init__(self, relocation_cycle: int):
+    def __init__(self, relocation_cycle: int, w_tx: float, w_gas: float, w_cross_tx: float):
         """
         :param context: {
             "from_block": 6000000,
@@ -109,17 +105,56 @@ class BalanceMeter:
         """
         self.context = {}
         self.relocation_cycle = relocation_cycle
+        self.w_tx = w_tx
+        self.w_gas = w_gas
+        self.w_cross_tx = w_cross_tx
+
         self.gas_used_acc = []
+        self.acc_txes = []
+        self.acc_tx_cross_shard = []
+        self.tx_graph = []
 
     def initialize(self):
-        pass
+        n_ag = self.context['account_group']
+
+        self.gas_used_acc = np.zeros((n_ag, self.relocation_cycle))
+        self.acc_txes = np.zeros(n_ag)
+        self.acc_tx_cross_shard = np.zeros((n_ag, n_ag))
+        self.tx_graph = np.zeros((n_ag, n_ag))
 
     def set_context(self, context: dict):
         self.context = context
 
     def collect(self, tx: dict, util_number: int):
-        pass
+        n_ag = self.context['account_group']
+        from_acc_group = account_to_group(tx['sender'], n_ag)
+        to_acc_group = from_acc_group
+
+        is_contract_creation = tx['toAddress'] == '-'
+        if not is_contract_creation:
+            to_acc_group = account_to_group(tx['toAddress'], n_ag)
+
+        self.gas_used_acc[to_acc_group][util_number % self.relocation_cycle] += tx['gasUsed']
+        self.acc_txes[from_acc_group] += 1
+
+        if from_acc_group != to_acc_group:
+            self.acc_tx_cross_shard[from_acc_group][to_acc_group] += self.context['gas_cross_shard_tx']
 
     def relocate(self, mapping_table: dict, util_number: int):
-        return mapping_table
+        if util_number % self.relocation_cycle == 0:
+            # build tx graph
+            gas_pred_acc = np.zeros(self.context['account_group'])
 
+            n_ag = self.context['account_group']
+            for i in range(n_ag):
+                for j in range(self.relocation_cycle):
+                    w = (2.0 * (j + 1.0)) / float(self.relocation_cycle * (self.relocation_cycle + 1))
+                    gas_pred_acc[i] += float(self.gas_used_acc[i][j] * w)
+
+            gas_pred_acc = normalize(gas_pred_acc.reshape(1, -1), norm='max')
+            acc_txes = normalize(self.acc_txes.reshape(1,-1), norm='max')
+            acc_tx_cross_shard = normalize(self.acc_tx_cross_shard.reshape(1,-1), norm='max').reshape(n_ag, n_ag)
+
+            return mapping_table
+        else:
+            return mapping_table
