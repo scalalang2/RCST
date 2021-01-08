@@ -109,17 +109,16 @@ class BalanceMeter:
         self.w_gas = w_gas
         self.w_cross_tx = w_cross_tx
 
-        self.gas_used_acc = []
-        self.acc_txes = []
-        self.acc_tx_cross_shard = []
-        self.tx_graph = []
+        self.gas_used_acc = np.array([])
+        self.acc_txes = np.array([])
+        self.acc_tx_cross_shard = np.array([])
 
     def initialize(self):
         n_ag = self.context['account_group']
 
-        self.gas_used_acc = np.zeros((n_ag, self.relocation_cycle))
-        self.acc_txes = np.zeros(n_ag)
-        self.acc_tx_cross_shard = np.zeros((n_ag, n_ag))
+        self.gas_used_acc = np.zeros((n_ag, n_ag, self.relocation_cycle))
+        self.acc_txes = np.zeros((n_ag, n_ag, self.relocation_cycle))
+        self.acc_tx_cross_shard = np.zeros((n_ag, n_ag, self.relocation_cycle))
         self.tx_graph = np.zeros((n_ag, n_ag))
 
     def set_context(self, context: dict):
@@ -134,26 +133,129 @@ class BalanceMeter:
         if not is_contract_creation:
             to_acc_group = account_to_group(tx['toAddress'], n_ag)
 
-        self.gas_used_acc[to_acc_group][util_number % self.relocation_cycle] += tx['gasUsed']
-        self.acc_txes[from_acc_group] += 1
+        self.gas_used_acc[from_acc_group][to_acc_group][util_number % self.relocation_cycle] += tx['gasUsed']
+        self.acc_txes[from_acc_group][to_acc_group][util_number % self.relocation_cycle] += 1
 
         if from_acc_group != to_acc_group:
-            self.acc_tx_cross_shard[from_acc_group][to_acc_group] += self.context['gas_cross_shard_tx']
+            self.acc_tx_cross_shard[from_acc_group][to_acc_group][util_number % self.relocation_cycle] += self.context['gas_cross_shard_tx']
+            self.acc_tx_cross_shard[to_acc_group][from_acc_group][util_number % self.relocation_cycle] += self.context['gas_cross_shard_tx']
 
     def relocate(self, mapping_table: dict, util_number: int):
         if util_number % self.relocation_cycle == 0:
             # build tx graph
-            gas_pred_acc = np.zeros(self.context['account_group'])
-
             n_ag = self.context['account_group']
-            for i in range(n_ag):
-                for j in range(self.relocation_cycle):
-                    w = (2.0 * (j + 1.0)) / float(self.relocation_cycle * (self.relocation_cycle + 1))
-                    gas_pred_acc[i] += float(self.gas_used_acc[i][j] * w)
+            gas_pred_acc = np.zeros((n_ag, n_ag))
+            acc_txes = np.zeros((n_ag, n_ag))
+            acc_tx_cross_shard = np.zeros((n_ag, n_ag))
 
-            gas_pred_acc = normalize(gas_pred_acc.reshape(1, -1), norm='max')
-            acc_txes = normalize(self.acc_txes.reshape(1,-1), norm='max')
-            acc_tx_cross_shard = normalize(self.acc_tx_cross_shard.reshape(1,-1), norm='max').reshape(n_ag, n_ag)
+            for i in range(n_ag):
+                for j in range(n_ag):
+                    for k in range(self.relocation_cycle):
+                        alpha = 0.6
+                        w = pow(alpha, self.relocation_cycle - k - 1) / float(1-alpha)
+                        gas_pred_acc[i][j] += float(self.gas_used_acc[i][j][k] * w)
+                        acc_txes[i][j] += float(self.acc_txes[i][j][k] * w)
+                        acc_tx_cross_shard[i][j] += float(self.acc_tx_cross_shard[i][j][k] * w)
+
+            gas_pred_acc = normalize(gas_pred_acc.reshape(1,-1), norm='max').reshape(n_ag, n_ag)
+            acc_txes = normalize(acc_txes.reshape(1, -1), norm='max').reshape(n_ag, n_ag)
+            acc_tx_cross_shard = normalize(acc_tx_cross_shard.reshape(1, -1), norm='max').reshape(n_ag, n_ag)
+            tx_graph = (gas_pred_acc * self.w_gas + acc_txes * self.w_tx + acc_tx_cross_shard * self.w_cross_tx) * 100000
+            edge_weight = acc_tx_cross_shard * 100000
+
+            G = nx.Graph()
+            edges = []
+            for i in range(n_ag):
+                for j in range(n_ag):
+                    edges.append((i, j, {'weight': int(edge_weight[i][j])}))
+
+            G.add_edges_from(edges)
+            tx_graph = tx_graph.sum(axis=0).reshape(n_ag)
+
+            # Add node weights to graph
+            for i, value in enumerate(tx_graph):
+                G.nodes[i]['node_value'] = int(value)
+
+            # tell METIS which node attribute to use for
+            G.graph['edge_weight_attr'] = 'weight'
+            G.graph['node_weight_attr'] = 'node_value'
+            (cut, parts) = metis.part_graph(G, self.context['number_of_shard'])
+
+
+            for acc, shard in enumerate(parts):
+                mapping_table[str(acc)] = shard
+
+            shards = np.zeros((self.context['number_of_shard'], n_ag))
+            for k in mapping_table:
+                shards[mapping_table[k]][int(k)] = 1
+
+            # for i in range(self.context['number_of_shard']):
+            #     list = []
+            #     for j in range(n_ag):
+            #         if shards[i][j] == 1:
+            #             list.append(j)
+            #
+            #     weight = 0
+            #     for k in list:
+            #         for j in list:
+            #             weight += edge_weight[k][j]
+            #
+            #     print("shard: {}, {}, {}".format(i, list, weight))
+
+            self.initialize()
+            return mapping_table
+        else:
+            return mapping_table
+
+    def relocate_edge(self, mapping_table: dict, util_number: int):
+        if util_number % self.relocation_cycle == 0:
+            # build tx graph
+            n_ag = self.context['account_group']
+            gas_pred_acc = np.zeros((n_ag, n_ag))
+
+            for i in range(n_ag):
+                for j in range(n_ag):
+                    for k in range(self.relocation_cycle):
+                        w = (2.0 * (k + 1.0)) / float(self.relocation_cycle * (self.relocation_cycle + 1))
+                        gas_pred_acc[i][j] += float(self.gas_used_acc[i][j][k] * w)
+
+            gas_pred_acc = normalize(gas_pred_acc, norm='max')
+            acc_txes = normalize(self.acc_txes, norm='max')
+            acc_tx_cross_shard = normalize(self.acc_tx_cross_shard, norm='max')
+            tx_graph = (gas_pred_acc * self.w_gas + acc_txes * self.w_tx + acc_tx_cross_shard * self.w_cross_tx) * 1000000
+            tx_graph = tx_graph.astype(int)
+
+            G = nx.DiGraph()
+            edges = []
+            for i in range(n_ag):
+                for j in range(n_ag):
+                    edges.append((i, j, {"weight": tx_graph[i][j]}))
+
+            G.add_edges_from(edges)
+
+            G.graph['edge_weight_attr'] = 'weight'
+            (cut, parts) = metis.part_graph(G, self.context['number_of_shard'], recursive=True)
+
+            for acc, shard in enumerate(parts):
+                mapping_table[str(acc)] = shard
+
+            shards = np.zeros((self.context['number_of_shard'], n_ag))
+            for k in mapping_table:
+                shards[mapping_table[k]][int(k)] = 1
+
+            print(gas_pred_acc)
+            for i in range(self.context['number_of_shard']):
+                list = []
+                for j in range(n_ag):
+                    if shards[i][j] == 1:
+                        list.append(j)
+
+                weight = 0
+                for k in list:
+                    for j in list:
+                        weight += tx_graph[k][j]
+
+                print("shard: {}, {}, {}".format(i, list, weight))
 
             return mapping_table
         else:
