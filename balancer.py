@@ -185,10 +185,10 @@ class BalanceMeter:
             for acc, shard in enumerate(parts):
                 mapping_table[str(acc)] = shard
 
-            shards = np.zeros((self.context['number_of_shard'], n_ag))
-            for k in mapping_table:
-                shards[mapping_table[k]][int(k)] = 1
-
+            # shards = np.zeros((self.context['number_of_shard'], n_ag))
+            # for k in mapping_table:
+            #     shards[mapping_table[k]][int(k)] = 1
+            #
             # for i in range(self.context['number_of_shard']):
             #     list = []
             #     for j in range(n_ag):
@@ -200,7 +200,11 @@ class BalanceMeter:
             #         for j in list:
             #             weight += edge_weight[k][j]
             #
-            #     print("shard: {}, {}, {}".format(i, list, weight))
+            #     value = 0
+            #     for k in list:
+            #         value += G.nodes[k]['node_value']
+            #
+            #     print("shard: {}, {}, {}, {}".format(i, list, weight, value))
 
             self.initialize()
             return mapping_table

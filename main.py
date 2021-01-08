@@ -2,7 +2,7 @@ from simulator import Simulator
 from balancer import SACC, GARET, BalanceMeter
 
 simulator = Simulator({
-    "from_block": 6000000,
+    "from_block": 7000000,
     "block_to_read": 50,
     "collation_cycle": 100,
     "account_group": 100,
@@ -23,6 +23,6 @@ balance_meter = BalanceMeter(
     relocation_cycle=5,
     w_tx=0.0,
     w_gas=0.7,
-    w_cross_tx=0.2
+    w_cross_tx=0.3
 )
 simulator.simulate(balancer=balance_meter, with_cstx=True)
