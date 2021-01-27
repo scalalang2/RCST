@@ -1,4 +1,3 @@
-from sklearn.preprocessing import normalize
 from util import account_to_group
 from queue import PriorityQueue
 
@@ -157,9 +156,6 @@ class BalanceMeter:
                         acc_txes[i][j] += float(self.acc_txes[i][j][k] * w)
                         acc_tx_cross_shard[i][j] += float(self.acc_tx_cross_shard[i][j][k] * w)
 
-            gas_pred_acc = normalize(gas_pred_acc.reshape(1,-1), norm='max').reshape(n_ag, n_ag)
-            acc_txes = normalize(acc_txes.reshape(1, -1), norm='max').reshape(n_ag, n_ag)
-            acc_tx_cross_shard = normalize(acc_tx_cross_shard.reshape(1, -1), norm='max').reshape(n_ag, n_ag)
             tx_graph = (gas_pred_acc * self.w_gas + acc_txes * self.w_tx + acc_tx_cross_shard * self.w_cross_tx) * 100000
             edge_weight = acc_tx_cross_shard * 100000
 
@@ -223,9 +219,8 @@ class BalanceMeter:
                         w = (2.0 * (k + 1.0)) / float(self.relocation_cycle * (self.relocation_cycle + 1))
                         gas_pred_acc[i][j] += float(self.gas_used_acc[i][j][k] * w)
 
-            gas_pred_acc = normalize(gas_pred_acc, norm='max')
-            acc_txes = normalize(self.acc_txes, norm='max')
-            acc_tx_cross_shard = normalize(self.acc_tx_cross_shard, norm='max')
+            acc_txes = self.acc_txes
+            acc_tx_cross_shard = self.acc_tx_cross_shard
             tx_graph = (gas_pred_acc * self.w_gas + acc_txes * self.w_tx + acc_tx_cross_shard * self.w_cross_tx) * 1000000
             tx_graph = tx_graph.astype(int)
 
