@@ -156,8 +156,8 @@ class BalanceMeter:
                         acc_txes[i][j] += float(self.acc_txes[i][j][k] * w)
                         acc_tx_cross_shard[i][j] += float(self.acc_tx_cross_shard[i][j][k] * w)
 
-            tx_graph = (gas_pred_acc * self.w_gas + acc_txes * self.w_tx + acc_tx_cross_shard * self.w_cross_tx) * 100000
-            edge_weight = acc_tx_cross_shard * 100000
+            tx_graph = (gas_pred_acc * self.w_gas + acc_txes * self.w_tx + acc_tx_cross_shard * self.w_cross_tx)
+            edge_weight = acc_tx_cross_shard
 
             G = nx.Graph()
             edges = []
@@ -203,59 +203,6 @@ class BalanceMeter:
             #     print("shard: {}, {}, {}, {}".format(i, list, weight, value))
 
             self.initialize()
-            return mapping_table
-        else:
-            return mapping_table
-
-    def relocate_edge(self, mapping_table: dict, util_number: int):
-        if util_number % self.relocation_cycle == 0:
-            # build tx graph
-            n_ag = self.context['account_group']
-            gas_pred_acc = np.zeros((n_ag, n_ag))
-
-            for i in range(n_ag):
-                for j in range(n_ag):
-                    for k in range(self.relocation_cycle):
-                        w = (2.0 * (k + 1.0)) / float(self.relocation_cycle * (self.relocation_cycle + 1))
-                        gas_pred_acc[i][j] += float(self.gas_used_acc[i][j][k] * w)
-
-            acc_txes = self.acc_txes
-            acc_tx_cross_shard = self.acc_tx_cross_shard
-            tx_graph = (gas_pred_acc * self.w_gas + acc_txes * self.w_tx + acc_tx_cross_shard * self.w_cross_tx) * 1000000
-            tx_graph = tx_graph.astype(int)
-
-            G = nx.DiGraph()
-            edges = []
-            for i in range(n_ag):
-                for j in range(n_ag):
-                    edges.append((i, j, {"weight": tx_graph[i][j]}))
-
-            G.add_edges_from(edges)
-
-            G.graph['edge_weight_attr'] = 'weight'
-            (cut, parts) = metis.part_graph(G, self.context['number_of_shard'], recursive=True)
-
-            for acc, shard in enumerate(parts):
-                mapping_table[str(acc)] = shard
-
-            shards = np.zeros((self.context['number_of_shard'], n_ag))
-            for k in mapping_table:
-                shards[mapping_table[k]][int(k)] = 1
-
-            print(gas_pred_acc)
-            for i in range(self.context['number_of_shard']):
-                list = []
-                for j in range(n_ag):
-                    if shards[i][j] == 1:
-                        list.append(j)
-
-                weight = 0
-                for k in list:
-                    for j in list:
-                        weight += tx_graph[k][j]
-
-                print("shard: {}, {}, {}".format(i, list, weight))
-
             return mapping_table
         else:
             return mapping_table

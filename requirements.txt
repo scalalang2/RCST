@@ -5,3 +5,4 @@ pymongo
 python-dotenv
 numpy
 pandas
+matplotlib

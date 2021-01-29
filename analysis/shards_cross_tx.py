@@ -1,9 +1,11 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from db import db
 from util import account_to_group
 from optparse import OptionParser
 
+# 샤드 개수 증가에 따른 크로스-샤드 트랜잭션 비율 증가 그래프
 # 계정 그룹을 랜덤으로 배치할 때
 # 나타나는 크로스-샤드 트랜잭션의 비율을 조사하고 리턴한다.
 # 6000000 블록부터 50개의 블록을 조사한다.
@@ -40,12 +42,19 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
     cross_tx_analysis = CrossTxAnalysis()
+    x = []
+    y = []
 
-    # 크로스 샤드 트랜잭션의 비율 출력
-    # 1번 샤드 부터 12번 샤드 까지 조사해본다.
-    for i in range(1, 12+1):
+    for i in range(1, 20+1):
         n_of_shards = i
         txes, cross_txes = cross_tx_analysis.simulate(n_of_shards)
         total_of_txes = np.sum(txes)
         total_of_cross_txes = np.sum(cross_txes)
-        print(total_of_cross_txes / total_of_txes)
+        print("shard: {}, ratio: {}".format(i, total_of_cross_txes / total_of_txes))
+        x.append(i)
+        y.append(int((total_of_cross_txes / total_of_txes) * 1000))
+
+    plt.plot(x, y)
+    plt.xlabel("Number of shards")
+    plt.ylabel("Ratio of cross-shard TX")
+    plt.show()
