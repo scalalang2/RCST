@@ -88,7 +88,7 @@ class GARET:
             return mapping_table
 
 
-class BalanceMeter:
+class RCTS:
     def __init__(self, relocation_cycle: int, w_tx: float, w_gas: float, w_cross_tx: float):
         """
         :param context: {

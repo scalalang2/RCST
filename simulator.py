@@ -1,6 +1,6 @@
 from db import db
 from util import account_to_group
-from balancer import SACC
+from balancer import SACC, GARET, RCTS
 
 import pandas as pd
 import numpy as np
@@ -122,5 +122,10 @@ if __name__ == "__main__":
     })
 
     sacc = SACC()
-    simulator.simulate(balancer=sacc)
     simulator.simulate(balancer=sacc, with_cstx=True)
+
+    garet = GARET(5)
+    simulator.simulate(balancer=garet, with_cstx=True)
+
+    rcts = RCTS(5, 0.1, 0.5, 0.4)
+    simulator.simulate(balancer=rcts, with_cstx=True)

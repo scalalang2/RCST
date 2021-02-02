@@ -9,21 +9,30 @@ def simulate(number_of_ag):
     account_group = np.zeros(number_of_ag)
 
     from_block = 7000000
-    block_to_read = 250
-    for block_number in range(from_block, from_block + block_to_read):
-        for tx in db.transactions.find({"blockNumber": block_number}):
+    transaction_to_read = 2000
+    i = 0
+    while i < transaction_to_read:
+        for tx in db.transactions.find({"blockNumber": from_block}):
             ag = account_to_group(tx['sender'], number_of_ag)
             account_group[ag] += tx['gasUsed']
+            from_block += 1
+            i += 1
+
+            if i == transaction_to_read:
+                break
 
     return account_group
 
 
 if __name__ == "__main__":
-    account_gas = simulate(500)
-    x = np.arange(1, 501, 1)
+    account_gas = simulate(100)
+    account_gas = np.array(account_gas)
 
-    plt.bar(x, account_gas)
-    plt.title("gas amount consumed by each account group.")
-    plt.ylabel("amount of gas consumed")
-    plt.xlabel("account group")
-    plt.show()
+    print("gas amount consumed by each account group.")
+    for index, val in enumerate(account_gas):
+        print("({}, {})".format(index, val))
+    print()
+
+    account_gas[::-1].sort()
+    ratio_of_consumption = account_gas[:20].sum() / account_gas.sum()
+    print("상위 20개의 계정 그룹이 사용한 가스량 비율: {}".format(ratio_of_consumption))

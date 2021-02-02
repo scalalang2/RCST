@@ -1,8 +1,8 @@
-# balanceMeter-py
-Python implementation of balanceMeter algorithm
+# RCTS
+Python implementation of RCTS algorithm
 
 ## TO-DO
-[-] Implment the balance-meter algorithm.
+[-] Implment the RCTS algorithm.
 
 [-] Visualize collation utilization into histogram.
 
