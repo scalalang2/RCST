@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 
 from db import db
 from util import account_to_group
-from optparse import OptionParser
 
 # 샤드 개수 증가에 따른 크로스-샤드 트랜잭션 비율 증가 그래프
 # 계정 그룹을 랜덤으로 배치할 때
@@ -36,11 +35,6 @@ class CrossTxAnalysis:
         return txes, cross_txes
 
 if __name__ == "__main__":
-    parser = OptionParser()
-    parser.add_option("-s", "--simulate", dest="simulate", action="store", default="cross-shard")
-    parser.add_option("-o", "--object", dest="objectFile", action="store", default="result.csv")
-    (options, args) = parser.parse_args()
-
     cross_tx_analysis = CrossTxAnalysis()
     x = []
     y = []
@@ -50,7 +44,7 @@ if __name__ == "__main__":
         txes, cross_txes = cross_tx_analysis.simulate(n_of_shards)
         total_of_txes = np.sum(txes)
         total_of_cross_txes = np.sum(cross_txes)
-        print("shard: {}, ratio: {}".format(i, total_of_cross_txes / total_of_txes))
+        print("{} {}".format(i, total_of_cross_txes / total_of_txes))
         x.append(i)
         y.append(int((total_of_cross_txes / total_of_txes) * 1000))
 

@@ -112,7 +112,7 @@ class Simulator:
 
 if __name__ == "__main__":
     simulator = Simulator({
-        "from_block": 6000000,
+        "from_block": 7000000,
         "block_to_read": 20,
         "collation_cycle": 10,
         "account_group": 100,
@@ -124,8 +124,8 @@ if __name__ == "__main__":
     sacc = SACC()
     simulator.simulate(balancer=sacc, with_cstx=True)
 
-    garet = GARET(5)
-    simulator.simulate(balancer=garet, with_cstx=True)
-
-    rcts = RCTS(5, 0.1, 0.5, 0.4)
-    simulator.simulate(balancer=rcts, with_cstx=True)
+    # garet = GARET(5)
+    # simulator.simulate(balancer=garet, with_cstx=True)
+    #
+    # rcts = RCTS(5, 0.1, 0.5, 0.4)
+    # simulator.simulate(balancer=rcts, with_cstx=True)

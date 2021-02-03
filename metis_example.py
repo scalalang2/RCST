@@ -1,18 +1,32 @@
-import networkx as nx
-import metis
+import numpy as np
+import pymetis
 
 if __name__ == "__main__":
-    G = nx.Graph()
-    G.add_edges_from([(0, 1), (0, 2), (0, 3), (1, 2), (3, 4)])
+    adjacency_list = [np.array([4, 2, 1]), # 0 번째 인덱스가 엮여 있는 것
+                      np.array([0, 2, 3]),
+                      np.array([4, 3, 1, 0]),
+                      np.array([1, 2, 5, 6]),
+                      np.array([0, 2, 5]),
+                      np.array([4, 3, 6]),
+                      np.array([5, 3])]
+    weight_list = [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+    ]
 
-    # set graph weight
-    for i, value in enumerate([1, 5, 10, 2, 4]):
-        G.nodes[i]['node_value'] = value
+    n_cuts, membership = pymetis.part_graph(2,
+                                            adjacency=adjacency_list,
+                                            vweights=weight_list)
+    # n_cuts = 3
+    # membership = [1, 1, 1, 0, 1, 0, 0]
 
-    G.graph['node_weight_attr'] = 'node_value'
+    nodes_part_0 = np.argwhere(np.array(membership) == 0).ravel()  # [3, 5, 6]
+    nodes_part_1 = np.argwhere(np.array(membership) == 1).ravel()  # [0, 1, 2, 4]
 
-    # Graph partitioning by metis
-    (cut, parts) = metis.part_graph(G, 2)
-
-    # result: [1, 0, 1, 0, 0]
-    print(parts)
+    print(nodes_part_0)
+    print(nodes_part_1)

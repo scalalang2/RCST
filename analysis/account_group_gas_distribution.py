@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     print("gas amount consumed by each account group.")
     for index, val in enumerate(account_gas):
-        print("({}, {})".format(index, val))
+        print("{} {}".format(index, val))
     print()
 
     account_gas[::-1].sort()

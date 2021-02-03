@@ -3,7 +3,7 @@ from queue import PriorityQueue
 
 import numpy as np
 import networkx as nx
-import metis
+import pymetis
 
 class SACC:
     def __init__(self):
@@ -158,28 +158,6 @@ class RCTS:
 
             tx_graph = (gas_pred_acc * self.w_gas + acc_txes * self.w_tx + acc_tx_cross_shard * self.w_cross_tx)
             edge_weight = acc_tx_cross_shard
-
-            G = nx.Graph()
-            edges = []
-            for i in range(n_ag):
-                for j in range(n_ag):
-                    edges.append((i, j, {'weight': int(edge_weight[i][j])}))
-
-            G.add_edges_from(edges)
-            tx_graph = tx_graph.sum(axis=0).reshape(n_ag)
-
-            # Add node weights to graph
-            for i, value in enumerate(tx_graph):
-                G.nodes[i]['node_value'] = int(value)
-
-            # tell METIS which node attribute to use for
-            G.graph['edge_weight_attr'] = 'weight'
-            G.graph['node_weight_attr'] = 'node_value'
-            (cut, parts) = metis.part_graph(G, self.context['number_of_shard'])
-
-
-            for acc, shard in enumerate(parts):
-                mapping_table[str(acc)] = shard
 
             # shards = np.zeros((self.context['number_of_shard'], n_ag))
             # for k in mapping_table:
