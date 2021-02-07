@@ -1,5 +1,5 @@
 from simulator import Simulator
-from balancer import SACC, GARET, BalanceMeter
+from balancer import SACC, GARET, RCST
 
 simulator = Simulator({
     "from_block": 7000000,
@@ -12,41 +12,7 @@ simulator = Simulator({
 })
 
 sacc = SACC()
-# simulator.simulate(balancer=sacc)
-simulator.simulate(balancer=sacc, with_cstx=True)
+simulator.simulate(balancer=sacc)
 
 garet = GARET(relocation_cycle=5)
-# simulator.simulate(balancer=garet)
-simulator.simulate(balancer=garet, with_cstx=True)
-
-garet = GARET(relocation_cycle=10)
-# simulator.simulate(balancer=garet)
-simulator.simulate(balancer=garet, with_cstx=True)
-
-garet = GARET(relocation_cycle=15)
-# simulator.simulate(balancer=garet)
-simulator.simulate(balancer=garet, with_cstx=True)
-
-balance_meter = BalanceMeter(
-    relocation_cycle=5,
-    w_tx=0.0,
-    w_gas=0.7,
-    w_cross_tx=0.3
-)
-simulator.simulate(balancer=balance_meter, with_cstx=True)
-
-balance_meter = BalanceMeter(
-    relocation_cycle=10,
-    w_tx=0.0,
-    w_gas=0.7,
-    w_cross_tx=0.3
-)
-simulator.simulate(balancer=balance_meter, with_cstx=True)
-
-balance_meter = BalanceMeter(
-    relocation_cycle=15,
-    w_tx=0.0,
-    w_gas=0.7,
-    w_cross_tx=0.3
-)
-simulator.simulate(balancer=balance_meter, with_cstx=True)
+simulator.simulate(balancer=garet)

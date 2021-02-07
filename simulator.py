@@ -1,6 +1,6 @@
 from db import db
 from util import account_to_group
-from balancer import SACC, GARET, RCTS
+from balancer import SACC, GARET, RCST
 
 import pandas as pd
 import numpy as np
@@ -44,7 +44,7 @@ class Simulator:
         for num in range(self.context['account_group']):
             self.mapping_table[str(num)] = num % self.context['number_of_shard']
 
-    def simulate(self, balancer, with_cstx=False):
+    def simulate(self, balancer):
         self.initialize()
         balancer.set_context(self.context)
         balancer.initialize()
@@ -69,12 +69,9 @@ class Simulator:
                 from_shard = self.collation_utils[util_number][from_shard_num]
                 to_shard = self.collation_utils[util_number][to_shard_num]
 
-                not_limited = to_shard['gas_used'] + tx['gasUsed'] < self.context['gas_limit']
-
-                if with_cstx and util_number > 0:
-                    prev_shard = self.collation_utils[util_number-1][to_shard_num]
-                    cross_shard_gas = prev_shard['cross_shard_tx'] * self.context['gas_cross_shard_tx']
-                    not_limited = (to_shard['gas_used'] + tx['gasUsed'] + cross_shard_gas) < self.context['gas_limit']
+                prev_shard = self.collation_utils[util_number-1][to_shard_num]
+                cross_shard_gas = prev_shard['cross_shard_tx'] * self.context['gas_cross_shard_tx']
+                not_limited = (to_shard['gas_used'] + tx['gasUsed'] + cross_shard_gas) < self.context['gas_limit']
 
                 if not_limited:
                     to_shard['gas_used'] += tx['gasUsed']
@@ -122,7 +119,7 @@ if __name__ == "__main__":
     })
 
     sacc = SACC()
-    simulator.simulate(balancer=sacc, with_cstx=True)
+    simulator.simulate(balancer=sacc)
 
     # garet = GARET(5)
     # simulator.simulate(balancer=garet, with_cstx=True)
