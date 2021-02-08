@@ -8,7 +8,7 @@ class SACC:
     def initialize(self):
         pass
 
-    def collect(self, tx: dict, util_number: int):
+    def collect(self, tx: dict, block_number: int, util_number: int):
         """S-ACC do nothing"""
         pass
 

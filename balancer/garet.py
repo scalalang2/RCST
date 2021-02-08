@@ -28,7 +28,7 @@ class GARET:
     def initialize(self):
         self.gas_used_acc = np.zeros((self.context['account_group'], self.relocation_cycle))
 
-    def collect(self, tx: dict, util_number: int):
+    def collect(self, tx: dict, block_number: int, util_number: int):
         n_ag = self.context['account_group']
         from_acc_group = account_to_group(tx['sender'], n_ag)
         to_acc_group = from_acc_group

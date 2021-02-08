@@ -1,5 +1,5 @@
 from util import account_to_group
-from balancer import SACC
+from balancer import SACC, GARET, RCST
 from datasource import database
 
 import pandas as pd
@@ -65,9 +65,9 @@ class Simulator:
 
         util_number = 0
         to_block = self.context['from_block'] + (self.context['block_to_read'] * self.context['collation_cycle'])
-        for block_number in range(self.context['from_block'], to_block):
+        for index, block_number in enumerate(range(self.context['from_block'], to_block)):
             for tx in datasource.fetch_transactions(block_number):
-                balancer.collect(tx, util_number)
+                balancer.collect(tx, block_number, util_number)
                 from_shard_num, to_shard_num = self.get_shard(tx)
 
                 to_shard_gas = self.gas_used[util_number][to_shard_num]
@@ -89,7 +89,7 @@ class Simulator:
                     self.pending_gas_used[util_number][to_shard_num] += tx['gasUsed']
                     self.pending_transactions[util_number][to_shard_num] += 1
 
-            if (block_number+1) % self.context['block_to_read'] == 0:
+            if (index+1) % self.context['block_to_read'] == 0:
                 util_number += 1
                 self.mapping_table = balancer.relocate(self.mapping_table, util_number)
 
@@ -100,7 +100,7 @@ class Simulator:
         report collation utilization
         :return: None
         """
-        data = pd.DataFrame(self.gas_used)
+        data = pd.DataFrame(self.gas_used)[-20:]
         utilization = data.mean(axis=0).mean()
 
         print(data)
@@ -110,8 +110,8 @@ class Simulator:
 if __name__ == "__main__":
     simulator = Simulator({
         "from_block": 7000000,
-        "block_to_read": 20,
-        "collation_cycle": 10,
+        "block_to_read": 30,
+        "collation_cycle": 100,
         "account_group": 100,
         "number_of_shard": 20,
         "gas_limit": 12000000,
@@ -121,8 +121,8 @@ if __name__ == "__main__":
     sacc = SACC()
     simulator.simulate(balancer=sacc, datasource=database)
 
-    garet = GARET(5)
-    simulator.simulate(balancer=garet)
+    garet = GARET(relocation_cycle=5)
+    simulator.simulate(balancer=garet, datasource=database)
 
-    # rcts = RCTS(5, 0.1, 0.5, 0.4)
-    # simulator.simulate(balancer=rcts)
+    rcst = RCST(relocation_cycle=5, alpha=0.2)
+    simulator.simulate(balancer=rcst, datasource=database)
