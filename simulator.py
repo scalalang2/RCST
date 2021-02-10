@@ -122,11 +122,11 @@ class Simulator:
 
 if __name__ == "__main__":
     simulator = Simulator({
-        "from_block": 7500000,
-        "block_to_read": 50,
-        "collation_cycle": 200,
+        "from_block": 7000000,
+        "block_to_read": 16,
+        "collation_cycle": 30,
         "account_group": 100,
-        "number_of_shard": 20,
+        "number_of_shard": 10,
         "gas_limit": 12000000,
         "gas_cross_shard_tx": 21000,
     })
@@ -138,10 +138,4 @@ if __name__ == "__main__":
     simulator.simulate(balancer=garet, datasource=database)
 
     rcst = RCST(relocation_cycle=5, alpha=0.3)
-    simulator.simulate(balancer=rcst, datasource=database)
-
-    rcst = RCST(relocation_cycle=5, alpha=0.2)
-    simulator.simulate(balancer=rcst, datasource=database)
-
-    rcst = RCST(relocation_cycle=5, alpha=0.1)
     simulator.simulate(balancer=rcst, datasource=database)

@@ -42,8 +42,16 @@ class RCST:
         return from_acc_group, to_acc_group
 
     def collect(self, tx: dict, block_number: int, util_number: int):
+        if util_number != 0 and self.current_util != util_number:
+            n_ag = self.context['account_group']
+
+            self.weight_vertex  = self.alpha * self.weight_vertex + (1 - self.alpha) * self.acc_vertex
+            self.weight_edge    = self.alpha * self.weight_edge + (1 - self.alpha) * self.acc_edge
+            self.acc_vertex     = np.zeros((n_ag))
+            self.acc_edge       = np.zeros((n_ag, n_ag))
+
         from_acc_group, to_acc_group = self.get_acc_group(tx)
-        self.acc_vertex[to_acc_group] += int(tx['gasUsed'] / 100)
+        self.acc_vertex[to_acc_group] += int(tx['gasUsed'] / 1000)
         if from_acc_group != to_acc_group:
             self.acc_edge[from_acc_group][to_acc_group] += 100
             
@@ -54,12 +62,7 @@ class RCST:
             # partition graph
             n_ag = self.context['account_group']
 
-            self.weight_vertex  = self.alpha * self.weight_vertex + (1 - self.alpha) * self.acc_vertex
-            self.weight_edge    = self.alpha * self.weight_edge + (1 - self.alpha) * self.acc_edge
-            self.acc_vertex     = np.zeros((n_ag))
-            self.acc_edge       = np.zeros((n_ag, n_ag))
-
-            vweights = list(self.weight_vertex.astype(int) + 10)
+            vweights = list(np.sqrt(self.weight_vertex).astype(int))
             weight_edge = self.weight_edge.astype(int)
             eweights = []
             adjacency_list = []
@@ -70,9 +73,6 @@ class RCST:
                     if i != j and weight_edge[i][j] != 0:
                         adj.append(j)
                         eweights.append(weight_edge[i][j])
-                    else:
-                        adj.append(j)
-                        eweights.append(1)
 
                 adjacency_list.append(np.array(adj))
 
