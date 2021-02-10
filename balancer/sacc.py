@@ -2,6 +2,9 @@ class SACC:
     def __init__(self):
         self.context = {}
 
+    def name(self):
+        return "sacc"
+
     def set_context(self, context: dict):
         self.context = context
 
@@ -14,3 +17,6 @@ class SACC:
 
     def relocate(self, mapping_table: dict, util_number: int):
         return mapping_table
+
+    def __str__(self):
+        return "[SACC]"

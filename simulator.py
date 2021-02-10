@@ -2,6 +2,7 @@ from util import account_to_group
 from balancer import SACC, GARET, RCST
 from datasource import database
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
@@ -84,7 +85,7 @@ class Simulator:
 
                     if to_shard_num != from_shard_num:
                         self.cross_shard_tx[util_number][to_shard_num] += 1
-                        self.cross_shard_tx[util_number][from_shard_num] += 1
+                        # self.cross_shard_tx[util_number][from_shard_num] += 1
                 else:
                     self.pending_gas_used[util_number][to_shard_num] += tx['gasUsed']
                     self.pending_transactions[util_number][to_shard_num] += 1
@@ -93,25 +94,37 @@ class Simulator:
                 util_number += 1
                 self.mapping_table = balancer.relocate(self.mapping_table, util_number)
 
-        self.report()
+        self.report(balancer)
 
-    def report(self):
+    def report(self, balancer):
         """
         report collation utilization
         :return: None
         """
         data = pd.DataFrame(self.gas_used)[-20:]
-        utilization = data.mean(axis=0).mean()
+        utilization = data.mean(axis=1) / self.context['gas_limit']
+        transactions = pd.DataFrame(self.transactions)[-20:].mean(axis=1)
+        cross_shard_tx = pd.DataFrame(self.cross_shard_tx)[-20:].mean(axis=1)
+        
+        pd.DataFrame(self.gas_used).to_csv("result/" + balancer.name() + "_gas_used.csv")
+        pd.DataFrame(self.transactions).to_csv("result/" + balancer.name() + "_txes.csv")
+        pd.DataFrame(self.cross_shard_tx).to_csv("result/" + balancer.name() + "_cross_txes.csv")
 
-        print(data)
-        print("Collation Utilization: %.6f%%" % (utilization/self.context['gas_limit']))
+        print(balancer)
+        print("makespan")
+        print((np.amax(self.gas_used[-20:], axis=1) - np.amin(self.gas_used[-20:], axis=1)).mean())
+        print("ratio of cross_shard_tx: %.6f%%" % ((cross_shard_tx / transactions).mean()))
+        print("resource utilization mean: %.6f%%" % (utilization.mean()))
+    
+    def report_graph(self):
+        pass
 
 
 if __name__ == "__main__":
     simulator = Simulator({
-        "from_block": 7000000,
-        "block_to_read": 30,
-        "collation_cycle": 100,
+        "from_block": 7500000,
+        "block_to_read": 50,
+        "collation_cycle": 200,
         "account_group": 100,
         "number_of_shard": 20,
         "gas_limit": 12000000,
@@ -124,5 +137,11 @@ if __name__ == "__main__":
     garet = GARET(relocation_cycle=5)
     simulator.simulate(balancer=garet, datasource=database)
 
+    rcst = RCST(relocation_cycle=5, alpha=0.3)
+    simulator.simulate(balancer=rcst, datasource=database)
+
     rcst = RCST(relocation_cycle=5, alpha=0.2)
+    simulator.simulate(balancer=rcst, datasource=database)
+
+    rcst = RCST(relocation_cycle=5, alpha=0.1)
     simulator.simulate(balancer=rcst, datasource=database)

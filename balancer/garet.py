@@ -22,6 +22,9 @@ class GARET:
         self.relocation_cycle = relocation_cycle
         self.gas_used_acc = []
 
+    def name(self):
+        return "garet_{}".format(self.relocation_cycle)
+
     def set_context(self, context: dict):
         self.context = context
 
@@ -67,3 +70,6 @@ class GARET:
             return mapping_table
         else:
             return mapping_table
+
+    def __str__(self):
+        return "[GARET, relocation_cycle: {}]".format(self.relocation_cycle)
