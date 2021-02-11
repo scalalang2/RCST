@@ -106,9 +106,10 @@ class Simulator:
         transactions = pd.DataFrame(self.transactions)[-20:].mean(axis=1)
         cross_shard_tx = pd.DataFrame(self.cross_shard_tx)[-20:].mean(axis=1)
         
-        pd.DataFrame(self.gas_used).to_csv("result/" + balancer.name() + "_gas_used.csv")
-        pd.DataFrame(self.transactions).to_csv("result/" + balancer.name() + "_txes.csv")
-        pd.DataFrame(self.cross_shard_tx).to_csv("result/" + balancer.name() + "_cross_txes.csv")
+        pd.DataFrame(self.gas_used).to_csv("result/" + balancer.name() + "_gas_used_shards_" + str(self.context['number_of_shard']) + ".csv")
+        pd.DataFrame(self.transactions).to_csv("result/" + balancer.name() + "_txes_" + str(self.context['number_of_shard']) + ".csv")
+        pd.DataFrame(self.cross_shard_tx).to_csv("result/" + balancer.name() + "_cross_txes_" + str(self.context['number_of_shard']) + ".csv")
+        pd.DataFrame(self.pending_transactions).to_csv("result/" + balancer.name() + "_pending_txes_" + str(self.context['number_of_shard']) + ".csv")
 
         print(balancer)
         print("makespan")
